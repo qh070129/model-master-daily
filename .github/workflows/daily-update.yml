@@ -7,6 +7,9 @@ on:
   # 允许手动触发
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -14,6 +17,8 @@ jobs:
     steps:
       - name: 检出仓库
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 设置 Python
         uses: actions/setup-python@v5
@@ -22,26 +27,46 @@ jobs:
 
       - name: 安装依赖
         run: |
-          pip install requests
+          pip install requests beautifulsoup4 playwright
+          playwright install chromium --with-deps
 
-      - name: 安装 Playwright（可选）
-        run: |
-          pip install playwright
-          playwright install chromium --with-deps || echo "Playwright install failed, will use manual mode"
-
-      - name: 运行爬虫
+      - name: 运行爬虫（抓取最新视频）
         run: python scripts/crawler.py
         env:
           TZ: Asia/Shanghai
 
-      - name: 提交更新
+      - name: 重新生成静态页面
+        run: python scripts/build_static.py
+        env:
+          TZ: Asia/Shanghai
+
+      - name: 提交更新到 main
         run: |
-          git config user.name "bot"
-          git config user.email "bot@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/transcripts.json app.html
           if git diff --staged --quiet; then
-            echo "没有新数据"
+            echo "没有新数据，跳过提交"
           else
-            git commit -m "update: $(TZ=Asia/Shanghai date +%Y-%m-%d)"
-            git push
+            git commit -m "🔄 自动更新: $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M')"
+            git push origin main
           fi
+
+      - name: 同步到 gh-pages 分支
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git stash
+          git checkout gh-pages
+          git checkout main -- app.html
+          git add app.html
+          if git diff --staged --quiet; then
+            echo "gh-pages 无变化"
+          else
+            git commit -m "🔄 Pages更新: $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M')"
+            git push origin gh-pages
+          fi
+          git checkout main
+          git stash pop 2>/dev/null || true
+        env:
+          TZ: Asia/Shanghai

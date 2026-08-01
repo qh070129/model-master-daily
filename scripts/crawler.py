@@ -3,17 +3,13 @@
 =========================
 功能：
 1. 读取 data/transcripts.json 获取已有数据
-2. 从抖音「模型先生」抓取新视频的逐字稿
-3. 增量追加到 JSON 文件
+2. 通过 Playwright 访问抖音「模型先生」主页，抓取最新视频
+3. 提取视频文案/字幕/章节要点
+4. 增量追加到 JSON 文件并重新生成 app.html
 
-抖音爬取策略（按优先级）：
-- 方式1: 通过抖音网页版用户主页 API 获取视频列表，再逐个获取字幕
-- 方式2: 使用 Playwright 模拟浏览器访问
-- 方式3: 手动补充数据（从 data/manual_entries.json 读取）
-
-输出：
-- 更新 data/transcripts.json（增量追加，不覆盖已有数据）
-- 打印新增条目数量
+策略：
+- 方式1: Playwright 爬取抖音用户主页视频列表
+- 方式2: 手动补充数据（从 data/manual_entries.json 读取）
 """
 
 import json
@@ -23,99 +19,62 @@ import sys
 import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Optional
 
 # ==================== 配置 ====================
 DATA_DIR = Path(__file__).parent.parent / "data"
 TRANSCRIPTS_FILE = DATA_DIR / "transcripts.json"
-MANUAL_FILE = DATA_DIR / "manual_entries.json"  # 手动补充的数据
+MANUAL_FILE = DATA_DIR / "manual_entries.json"
 
-# 抖音博主标识
-DOUYIN_USER_ID = "模型先生"  # 抖音用户ID或sec_uid
+# 模型先生的抖音 sec_uid（从搜索结果获取）
+DOUYIN_USER_URL = "https://www.douyin.com/user/MS4wLjABAAAAK713M9d8PGNb_WiMYf7yKhOI5y60H4uELJK2guDjJT0"
 
 # ==================== 工具函数 ====================
 def load_json(path: Path) -> dict:
-    """安全加载 JSON"""
     if path.exists():
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
 def save_json(data: dict, path: Path):
-    """安全保存 JSON"""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    tmp.replace(path)  # 原子替换
+    tmp.replace(path)
 
 def get_existing_ids(data: dict) -> set:
-    """获取已有视频ID集合"""
     return {card["id"] for card in data.get("cards", [])}
 
-def generate_id(publish_time: datetime) -> str:
-    """根据发布时间生成唯一ID"""
-    return publish_time.strftime("%Y%m%d-%H%M%S")
-
-def parse_duration(duration_text: str) -> str:
-    """标准化时长格式"""
-    duration_text = duration_text.strip()
-    if not duration_text.endswith("s"):
-        # 尝试解析纯秒数
+def generate_id(date_str: str) -> str:
+    """从日期字符串生成ID"""
+    # 尝试解析各种日期格式
+    for fmt in ["%Y/%m/%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M:%S"]:
         try:
-            seconds = int(duration_text)
-            return f"{seconds}s"
+            dt = datetime.strptime(date_str.split(" 周")[0].strip(), fmt)
+            return dt.strftime("%Y%m%d-%H%M%S")
         except ValueError:
-            pass
-    return duration_text
+            continue
+    # 如果解析失败，用时间戳
+    return datetime.now().strftime("%Y%m%d-%H%M%S")
 
 
-# ==================== 爬取策略1: 抖音网页版API ====================
-def fetch_douyin_web_api() -> list[dict]:
-    """
-    通过抖音网页版 API 获取模型先生的视频列表。
-    注意：此方法依赖抖音的公开接口，可能随时失效。
-    返回格式：[{id, date, duration, tags, body, marketDate, market}]
-    """
-    import requests
-
-    new_cards = []
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        "Referer": "https://www.douyin.com/",
-        "Accept": "application/json, text/plain, */*",
-    }
-
-    try:
-        # Step 1: 获取用户 sec_uid（如果只知道用户名）
-        # 通过搜索接口获取
-        search_url = f"https://www.douyin.com/aweme/v1/web/discover/search/"
-        # 实际使用时需要完整的 API 调用链，这里仅作示意
-        print("[API] 抖音网页版API需要完整的cookie和签名，建议使用Playwright方案")
-        print("[API] 跳过API方式，使用手动/Playwright方式")
-
-    except Exception as e:
-        print(f"[API] 请求失败: {e}")
-
-    return new_cards
-
-
-# ==================== 爬取策略2: Playwright 浏览器自动化 ====================
+# ==================== 爬取策略1: Playwright ====================
 def fetch_douyin_playwright() -> list[dict]:
-    """
-    使用 Playwright 模拟浏览器访问抖音。
-    需要安装: pip install playwright && playwright install chromium
-    """
+    """使用 Playwright 爬取抖音用户主页最新视频"""
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        print("[Playwright] playwright 未安装，跳过")
+        print("[Playwright] 未安装，跳过自动爬取")
+        print("[Playwright] 安装方法: pip install playwright && playwright install chromium")
         return []
 
     new_cards = []
-
+    
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=['--no-sandbox', '--disable-dev-shm-usage']
+        )
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
             viewport={"width": 1280, "height": 720},
@@ -123,35 +82,155 @@ def fetch_douyin_playwright() -> list[dict]:
         page = context.new_page()
 
         try:
-            # 访问抖音用户主页（需要知道用户的 sec_uid）
-            # 示例：https://www.douyin.com/user/<sec_uid>
-            # 实际使用时需要先通过搜索获取 sec_uid
-            print("[Playwright] 请配置用户的 sec_uid 或搜索逻辑")
-            print("[Playwright] 示例: page.goto('https://www.douyin.com/user/MS4wLjABAAAA...')")
+            print(f"[Playwright] 访问用户主页: {DOUYIN_USER_URL}")
+            page.goto(DOUYIN_USER_URL, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(5000)
 
-            # 等待视频列表加载
-            # page.wait_for_selector('[data-e2e="user-post-list"]', timeout=15000)
+            # 获取视频列表
+            videos = page.evaluate("""() => {
+                const items = document.querySelectorAll('a[href*="/video/"]');
+                const results = [];
+                const seen = new Set();
+                for (const item of items) {
+                    const href = item.href;
+                    if (href.includes('/video/') && !seen.has(href)) {
+                        seen.add(href);
+                        const titleEl = item.querySelector('p, span, div');
+                        results.push({
+                            url: href,
+                            title: titleEl ? titleEl.textContent.trim() : ''
+                        });
+                    }
+                }
+                return results.slice(0, 5);  // 只取最新5个
+            }""")
+            
+            print(f"[Playwright] 发现 {len(videos)} 个视频")
 
-            # 提取视频列表
-            # videos = page.evaluate("""() => {
-            #     const items = document.querySelectorAll('[data-e2e="user-post-item"]');
-            #     return Array.from(items).map(item => ({
-            #         title: item.querySelector('.title')?.textContent || '',
-            #         link: item.querySelector('a')?.href || '',
-            #     }));
-            # }""")
-
-            # 逐个访问视频页面提取字幕
-            # for video in videos:
-            #     page.goto(video['link'])
-            #     page.wait_for_timeout(3000)
-            #     subtitle = page.evaluate("""() => {
-            #         const el = document.querySelector('.subtitle-text');
-            #         return el ? el.textContent : '';
-            #     }""")
-            #     ...
-
-            print("[Playwright] 爬取逻辑需要根据实际抖音页面结构调整")
+            # 获取已有数据中的最新日期
+            existing = load_json(TRANSCRIPTS_FILE)
+            existing_ids = get_existing_ids(existing)
+            
+            for i, video in enumerate(videos):
+                video_url = video['url']
+                # 从URL提取视频ID
+                vid_match = re.search(r'/video/(\d+)', video_url)
+                if not vid_match:
+                    continue
+                video_id = vid_match.group(1)
+                
+                # 用视频ID做去重检查（取后10位作为日期近似）
+                # 我们需要访问视频页面才能获取发布时间
+                print(f"[Playwright] 访问视频 {i+1}/{len(videos)}: {video_url}")
+                
+                try:
+                    page.goto(video_url, wait_until="domcontentloaded", timeout=30000)
+                    page.wait_for_timeout(3000)
+                    
+                    # 提取页面文字
+                    text = page.evaluate("() => document.body.innerText")
+                    title = page.title()
+                    
+                    # 提取发布时间
+                    date_match = re.search(r'发布时间[：:]\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})', text)
+                    if not date_match:
+                        date_match = re.search(r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})', text)
+                    
+                    if not date_match:
+                        print(f"  无法提取发布时间，跳过")
+                        continue
+                    
+                    pub_date_str = date_match.group(1)
+                    pub_dt = datetime.strptime(pub_date_str, "%Y-%m-%d %H:%M")
+                    card_id = pub_dt.strftime("%Y%m%d-%H%M%S")
+                    
+                    if card_id in existing_ids:
+                        print(f"  已存在 {card_id}，跳过")
+                        continue
+                    
+                    # 提取时长
+                    duration_match = re.search(r'(\d{2}:\d{2})\s*/\s*(\d{2}:\d{2})', text)
+                    duration = "0s"
+                    if duration_match:
+                        time_str = duration_match.group(2)
+                        parts = time_str.split(":")
+                        if len(parts) == 2:
+                            duration = f"{int(parts[0])*60 + int(parts[1])}s"
+                    
+                    # 提取章节要点（AI生成的内容）
+                    chapters = []
+                    chapter_match = re.search(r'章节要点\s*(.*?)(?:\d{1,2}:\d{2}\n|$)', text, re.DOTALL)
+                    
+                    # 提取描述文字
+                    desc_match = re.search(r'章节要点\n(.*?)\d{2}:\d{2}', text, re.DOTALL)
+                    if desc_match:
+                        desc = desc_match.group(1).strip()
+                    else:
+                        # 尝试提取视频描述
+                        desc_lines = []
+                        for line in text.split('\n'):
+                            line = line.strip()
+                            if line and not any(skip in line for skip in [
+                                '抖音', '登录', '搜索', '充钻石', '客户端', '通知', '消息',
+                                '投稿', '精选', '推荐', '关注', '朋友', '直播', '放映厅',
+                                '短剧', '小游戏', '读屏', '打开声音', '倍速', '智能',
+                                '清屏', '连播', '理财有风险', '举报', '发布时间',
+                                '全部评论', '请先登录', '大家都在搜', '暂无评论',
+                                '粉丝', '获赞', '推荐视频', '广告投放', '用户服务',
+                                '隐私政策', '账号找回', '加入我们', '营业执照',
+                                '友情链接', '站点地图', '下载抖音', '抖音电商',
+                                '网络谣言', '违法和不良', '算法推荐', '体育饭圈',
+                                '京ICP', '广播电视', '增值电信', '网络文化',
+                                '京公网', '互联网宗教', '热门', '内容由AI生成',
+                                '抢首评', '点赞', '收藏', '转发', '分享'
+                            ]):
+                                if len(line) > 10 and len(line) < 500:
+                                    desc_lines.append(line)
+                        desc = '\n'.join(desc_lines[:3]) if desc_lines else video.get('title', '')
+                    
+                    # 提取标签
+                    tags = []
+                    for tag_match in re.finditer(r'#([\u4e00-\u9fa5\w]+)', text):
+                        tag = tag_match.group(1)
+                        if tag not in tags and len(tag) < 10:
+                            tags.append(tag)
+                    if not tags:
+                        tags = ["市场判断"]
+                    tags = tags[:4]
+                    
+                    # 提取点赞数
+                    likes_match = re.search(r'(\d+\.?\d*万?)\s*抢首评', text)
+                    likes = likes_match.group(1) if likes_match else ""
+                    
+                    card = {
+                        "id": card_id,
+                        "date": f"{pub_dt.year}/{pub_dt.month}/{pub_dt.day} {pub_dt.strftime('%H:%M')} " + 
+                                ["周一","周二","周三","周四","周五","周六","周日"][pub_dt.weekday()],
+                        "duration": duration,
+                        "tags": tags,
+                        "body": desc[:1000],
+                        "marketDate": f"{pub_dt.strftime('%Y-%m-%d')}（交易日）",
+                        "market": {
+                            "上证指数": [0, 0],
+                            "深成指": [0, 0],
+                            "创业板指": [0, 0],
+                            "科创50": [0, 0]
+                        },
+                        "source_url": video_url,
+                    }
+                    
+                    if likes:
+                        card["stats"] = {"likes": likes}
+                    
+                    new_cards.append(card)
+                    print(f"  ✅ 新视频: {card_id} - {desc[:50]}...")
+                    
+                except Exception as e:
+                    print(f"  ❌ 访问视频失败: {e}")
+                    continue
+                
+                # 避免频繁访问
+                time.sleep(2)
 
         except Exception as e:
             print(f"[Playwright] 爬取出错: {e}")
@@ -161,42 +240,25 @@ def fetch_douyin_playwright() -> list[dict]:
     return new_cards
 
 
-# ==================== 爬取策略3: 手动数据导入 ====================
+# ==================== 爬取策略2: 手动数据导入 ====================
 def import_manual_entries() -> list[dict]:
-    """
-    从 data/manual_entries.json 读取手动添加的数据。
-    适用于无法自动爬取时，用户手动粘贴逐字稿。
-    
-    manual_entries.json 格式：
-    [
-      {
-        "date": "2026/8/1 15:30:00 周五",
-        "duration": "45s",
-        "tags": ["科技股", "市场判断"],
-        "body": "逐字稿内容...",
-        "marketDate": "2026-08-01（交易日）",
-        "market": {
-          "上证指数": [4000.00, 0.50],
-          "深成指": [15000.00, 0.80],
-          "创业板指": [3900.00, 1.20],
-          "科创50": [2000.00, 0.30]
-        }
-      }
-    ]
-    """
+    """从 data/manual_entries.json 读取手动添加的数据"""
     data = load_json(MANUAL_FILE)
     entries = data if isinstance(data, list) else data.get("entries", [])
 
     new_cards = []
     for entry in entries:
-        # 生成 ID
-        dt = datetime.strptime(entry["date"].split(" ")[0], "%Y/%m/%d")
-        entry_time = datetime.strptime(
-            entry["date"].split(" ")[1], "%H:%M:%S"
-        )
-        dt = dt.replace(hour=entry_time.hour, minute=entry_time.minute, second=entry_time.second)
-        entry["id"] = generate_id(dt)
-        entry["duration"] = parse_duration(entry.get("duration", "0s"))
+        date_str = entry["date"].split(" 周")[0].strip()
+        for fmt in ["%Y/%m/%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"]:
+            try:
+                dt = datetime.strptime(date_str, fmt)
+                entry["id"] = dt.strftime("%Y%m%d-%H%M%S")
+                break
+            except ValueError:
+                continue
+        if "id" not in entry:
+            entry["id"] = datetime.now().strftime("%Y%m%d-%H%M%S")
+        entry["duration"] = entry.get("duration", "0s")
         new_cards.append(entry)
 
     return new_cards
@@ -208,33 +270,28 @@ def main():
     print(f"模型先生逐字稿爬虫 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
 
-    # 加载现有数据
+    # 切换到仓库根目录
+    os.chdir(Path(__file__).parent.parent)
+
     existing = load_json(TRANSCRIPTS_FILE)
     existing_ids = get_existing_ids(existing)
     print(f"现有数据: {len(existing_ids)} 条逐字稿")
 
-    # 收集新数据（按优先级尝试）
     all_new_cards = []
 
-    # 策略3: 手动数据（最可靠，优先处理）
+    # 策略2: 手动数据（最可靠，优先处理）
     if MANUAL_FILE.exists():
         manual_cards = import_manual_entries()
         print(f"手动数据: {len(manual_cards)} 条")
         all_new_cards.extend(manual_cards)
 
-    # 策略1: API（如果配置了）
-    api_cards = fetch_douyin_web_api()
-    if api_cards:
-        print(f"API数据: {len(api_cards)} 条")
-        all_new_cards.extend(api_cards)
-
-    # 策略2: Playwright（备选）
+    # 策略1: Playwright 自动爬取
     playwright_cards = fetch_douyin_playwright()
     if playwright_cards:
         print(f"Playwright数据: {len(playwright_cards)} 条")
         all_new_cards.extend(playwright_cards)
 
-    # 去重 + 排序
+    # 去重
     seen = set()
     unique_new = []
     for card in all_new_cards:
@@ -253,13 +310,21 @@ def main():
     # 合并到现有数据
     existing["cards"] = unique_new + existing.get("cards", [])
     existing["meta"]["stats"]["videos"] = len(existing["cards"])
-    existing["meta"]["stats"]["transcripts"] = sum(1 for c in existing["cards"] if c.get("body") and c["body"] != "（该视频无音轨）")
-    existing["meta"]["last_updated"] = datetime.now(timezone(timedelta(hours=8))).isoformat()
+    existing["meta"]["stats"]["transcripts"] = sum(
+        1 for c in existing["cards"] if c.get("body") and c["body"] != "（该视频无音轨）"
+    )
+    existing["meta"]["last_updated"] = datetime.now(
+        timezone(timedelta(hours=8))
+    ).isoformat()
 
     # 更新覆盖时段
     dates = [c.get("id", "")[:8] for c in existing["cards"] if c.get("id")]
     if dates:
-        existing["meta"]["period"] = f"{min(dates)[:4]}/{min(dates)[4:6]}/{min(dates)[6:8]} ~ {max(dates)[:4]}/{max(dates)[4:6]}/{max(dates)[6:8]}"
+        min_d, max_d = min(dates), max(dates)
+        existing["meta"]["period"] = (
+            f"{min_d[:4]}/{min_d[4:6]}/{min_d[6:8]} ~ "
+            f"{max_d[:4]}/{max_d[4:6]}/{max_d[6:8]}"
+        )
 
     # 保存
     save_json(existing, TRANSCRIPTS_FILE)
@@ -277,7 +342,7 @@ def main():
         print("\n🔨 重新构建 app.html...")
         import subprocess
         result = subprocess.run(
-            [sys.executable, str(Path(__file__).parent / "build.py")],
+            [sys.executable, str(Path(__file__).parent / "build_static.py")],
             capture_output=True, text=True
         )
         print(result.stdout.strip())
