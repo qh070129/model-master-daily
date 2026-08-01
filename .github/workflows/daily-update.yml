@@ -1,0 +1,47 @@
+name: 每日更新逐字稿
+
+on:
+  schedule:
+    # 北京时间每天 22:00 (UTC 14:00)
+    - cron: '0 14 * * *'
+  # 允许手动触发
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: |
+          pip install requests
+
+      - name: 安装 Playwright（可选）
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps || echo "Playwright install failed, will use manual mode"
+
+      - name: 运行爬虫
+        run: python scripts/crawler.py
+        env:
+          TZ: Asia/Shanghai
+
+      - name: 提交更新
+        run: |
+          git config user.name "bot"
+          git config user.email "bot@github.com"
+          git add data/transcripts.json app.html
+          if git diff --staged --quiet; then
+            echo "没有新数据"
+          else
+            git commit -m "update: $(TZ=Asia/Shanghai date +%Y-%m-%d)"
+            git push
+          fi

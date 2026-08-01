@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+*.png
+test.html
+index.html
+模型先生_精华_独立版.html
+模型先生_逐字稿精华.html
+模型先生_逐字稿精华.md

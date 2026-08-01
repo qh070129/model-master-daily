@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>模型先生 · 逐字稿精华</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:#f8f9fa;color:#1a1a2e;line-height:1.7}
+.hd{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);border-bottom:1px solid #e5e7eb;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.hl{font-weight:700;font-size:16px;display:flex;align-items:center;gap:6px}
+.hl svg{width:22px;height:22px}
+.hr{font-size:10px;color:#9ca3af}
+.ctr{max-width:680px;margin:0 auto;padding:16px}
+.hc{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:24px 20px;margin-bottom:16px;text-align:center;position:relative;overflow:hidden}
+.hc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#10b981,#34d399)}
+.hb{display:inline-block;background:#d1fae5;color:#10b981;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:6px}
+.ht{font-size:22px;font-weight:800;margin:8px 0 4px}
+.hs{font-size:13px;color:#6b7280;margin-bottom:8px}
+.hm{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.hmi{display:flex;flex-direction:column;align-items:center}
+.hmv{font-size:18px;font-weight:700;color:#10b981}
+.hml{font-size:11px;color:#9ca3af}
+.hd2{font-size:11px;color:#9ca3af;margin-top:6px}
+.tn{display:flex;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:4px;margin-bottom:16px;gap:4px;position:sticky;top:52px;z-index:99}
+.tb{flex:1;padding:10px 8px;border:none;border-radius:10px;background:transparent;font-size:14px;font-weight:500;color:#6b7280;cursor:pointer;text-align:center}
+.tb.ac{background:#10b981;color:#fff;font-weight:600}
+.fb{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none}
+.fb::-webkit-scrollbar{display:none}
+.ftag{padding:6px 14px;border-radius:20px;border:1px solid #e5e7eb;background:#fff;font-size:12px;font-weight:500;color:#6b7280;cursor:pointer;white-space:nowrap}
+.ftag.ac{background:#10b981;color:#fff;border-color:#10b981}
+.st{font-size:18px;font-weight:700;margin-bottom:4px}
+.sd{font-size:13px;color:#9ca3af;margin-bottom:12px}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:16px;margin-bottom:12px}
+.chd{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.cd{font-size:13px;font-weight:600}
+.cdr{font-size:11px;color:#9ca3af;background:#f3f4f6;padding:2px 8px;border-radius:10px}
+.ctg{display:flex;gap:4px;flex-wrap:wrap}
+.ct{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:500}
+.ct.tech{background:rgba(16,185,129,.1);color:#10b981}
+.ct.market{background:rgba(59,130,246,.1);color:#3b82f6}
+.ct.ops{background:rgba(245,158,11,.1);color:#f59e0b}
+.ct.aero{background:rgba(139,92,246,.1);color:#8b5cf6}
+.ct.metal{background:rgba(239,68,68,.1);color:#ef4444}
+.ct.semi{background:rgba(236,72,153,.1);color:#ec4899}
+.ct.broker{background:rgba(14,165,233,.1);color:#0ea5e9}
+.ct.other{background:#f3f4f6;color:#4b5563}
+.cbd{font-size:14px;line-height:1.8}
+.cf2{margin-top:12px;padding-top:10px;border-top:1px solid #e5e7eb}
+.cmd{font-size:11px;color:#9ca3af;margin-bottom:6px}
+.cmk{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.mi{text-align:center;padding:4px}
+.mn{font-size:10px;color:#9ca3af}
+.mv{font-size:12px;font-weight:600}
+.mc{font-size:11px}
+.mc.up{color:#ef4444}
+.mc.down{color:#10b981}
+.cs{margin-top:14px;padding-top:12px;border-top:1px dashed #e5e7eb}
+.ctb{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#10b981;cursor:pointer;padding:4px 10px;border-radius:14px;border:1px solid transparent;background:none;font-family:inherit}
+.ctb:hover{background:#d1fae5;border-color:#10b981}
+.cl{display:none;margin-top:10px}
+.cl.show{display:block}
+.cm{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #e5e7eb}
+.cm:last-child{border-bottom:none;padding-bottom:0}
+.ca{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff}
+.ca.user{background:linear-gradient(135deg,#667eea,#764ba2)}
+.ca.author{background:linear-gradient(135deg,#f093fb,#f5576c)}
+.cb{flex:1;min-width:0}
+.ch2{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.cu{font-size:12px;font-weight:600}
+.cba{font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(245,87,108,.12);color:#f5576c;font-weight:500}
+.ct2{font-size:13px;line-height:1.6;color:#6b7280}
+.cf{font-size:11px;color:#9ca3af;margin-top:4px}
+.mc2{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:20px;display:flex;gap:16px;align-items:flex-start;margin-bottom:12px}
+.mn2{font-size:28px;font-weight:800;color:#10b981;opacity:.4;line-height:1;min-width:36px;text-align:center}
+.mb2 h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.mq{font-size:12px;color:#9ca3af;font-style:italic;margin-bottom:6px}
+.md{font-size:13px;color:#6b7280;line-height:1.7}
+.rc{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:16px;display:flex;gap:14px;align-items:flex-start;margin-bottom:12px}
+.rd{font-size:14px;font-weight:700;color:#10b981;min-width:40px;text-align:center}
+.rb{flex:1}
+.rp{font-size:14px;margin-bottom:6px}
+.ra{font-size:12px;color:#6b7280;margin-bottom:4px}
+.rr{display:inline-block;font-size:11px;font-weight:600;padding:2px 10px;border-radius:10px}
+.rr.correct{background:rgba(16,185,129,.1);color:#10b981}
+.rr.pending{background:rgba(245,158,11,.1);color:#f59e0b}
+.rr.wake{background:rgba(59,130,246,.1);color:#3b82f6}
+.ft{text-align:center;padding:24px 16px;font-size:12px;color:#9ca3af;line-height:1.8}
+@media(prefers-color-scheme:dark){
+body{background:#0f172a;color:#e2e8f0}
+.hd{background:rgba(15,23,42,.85);border-color:#334155}
+.hc,.card,.mc2,.rc,.tn{background:#1e293b;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.ftag{background:#1e293b;border-color:#334155}
+.cdr,.ct.other{background:#334155;color:#94a3b8}
+.cf2,.cm,.cs{border-color:#334155}
+}
+</style>
+</head>
+<body>
+<div class="hd">
+  <span class="hl"><svg viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="5" fill="url(#g)"/><defs><linearGradient id="g" x1="12" y1="0" x2="12" y2="24"><stop stop-color="#0EC8A9"/><stop offset="1" stop-color="#01C886"/></linearGradient></defs></svg>模型先生</span>
+  <span class="hr" id="updateTime"></span>
+</div>
+<div class="ctr">
+  <div class="hc" id="hero"></div>
+  <div class="tn">
+    <button class="tb ac" onclick="switchTab('track')">📋 跟踪</button>
+    <button class="tb" onclick="switchTab('method')">🧠 方法论</button>
+    <button class="tb" onclick="switchTab('review')">📊 复盘</button>
+  </div>
+  <div id="tab-track">
+    <div class="st">每日跟踪</div>
+    <div class="sd">最近视频，按时间从新到旧</div>
+    <div class="fb" id="filterBar"></div>
+    <div id="cardList"></div>
+  </div>
+  <div id="tab-method" style="display:none">
+    <div class="st">核心方法论</div>
+    <div class="sd">从逐字稿中提炼的6大思维体系</div>
+    <div id="methodList"></div>
+  </div>
+  <div id="tab-review" style="display:none">
+    <div class="st">判断复盘</div>
+    <div class="sd">近期市场判断的验证记录</div>
+    <div id="reviewList"></div>
+  </div>
+  <div class="ft" id="footer"></div>
+</div>
+
+<script>
+// DATA INJECTED AT BUILD TIME
+var D = __DATA_PLACEHOLDER__;
+
+var TAG_MAP = {科技股:'tech',市场判断:'market',操作策略:'ops',商业航天:'aero',有色金属:'metal',半导体:'semi',券商金融:'broker',存储:'tech'};
+function tc(t){return TAG_MAP[t]||'other'}
+
+// HERO
+var m = D.meta;
+document.getElementById('hero').innerHTML =
+  '<div class="hb">精华精选</div><h1 class="ht">'+m.title+'</h1><p class="hs">整理：'+m.author+'</p>'+
+  '<div class="hm"><div class="hmi"><span class="hmv">'+m.stats.videos+'</span><span class="hml">精选视频</span></div>'+
+  '<div class="hmi"><span class="hmv">'+m.stats.transcripts+'</span><span class="hml">完整逐字稿</span></div>'+
+  '<div class="hmi"><span class="hmv">'+m.period+'</span><span class="hml">覆盖时段</span></div></div>'+
+  '<p class="hd2">'+m.disclaimer+'</p>';
+document.getElementById('updateTime').textContent = '更新于 '+m.last_updated;
+document.getElementById('footer').innerHTML = '禁止商用转载<br>精华精选整理：'+m.author+'<br>完整版请关注抖音「模型先生」';
+
+// FILTER BAR
+var tagCounts = {};
+D.cards.forEach(function(c){c.tags.forEach(function(t){tagCounts[t]=(tagCounts[t]||0)+1})});
+var sorted = Object.entries(tagCounts).sort(function(a,b){return b[1]-a[1]});
+var fb = document.getElementById('filterBar');
+fb.innerHTML = '<span class="ftag ac" onclick="filter(\'all\')">全部 ('+D.cards.length+')</span>';
+sorted.forEach(function(e){fb.innerHTML += '<span class="ftag" onclick="filter(\''+e[0]+'\')">'+e[0]+' ('+e[1]+')</span>'});
+
+// RENDER CARDS
+function filter(tag){
+  document.querySelectorAll('.ftag').forEach(function(b){
+    b.classList.toggle('ac', tag==='all'?b.textContent.startsWith('全部'):b.textContent.startsWith(tag));
+  });
+  var cards = tag==='all' ? D.cards : D.cards.filter(function(c){return c.tags.indexOf(tag)>=0});
+  var html = '';
+  cards.forEach(function(c){
+    var tags = c.tags.map(function(t){return '<span class="ct '+tc(t)+'">'+t+'</span>'}).join('');
+    var market = '';
+    for(var k in c.market){var v=c.market[k];market+='<div class="mi"><div class="mn">'+k+'</div><div class="mv">'+v[0].toFixed(2)+'</div><div class="mc '+(v[1]>=0?'up':'down')+'">'+(v[1]>=0?'+':'')+v[1].toFixed(2)+'%</div></div>'}
+    var cmts = '';
+    if(c.comments&&c.comments.length){
+      var items = c.comments.map(function(cm){return '<div class="cm"><div class="ca '+(cm.is_author?'author':'user')+'">'+(cm.is_author?'M':cm.user[0])+'</div><div class="cb"><div class="ch2"><span class="cu">'+cm.user+'</span>'+(cm.is_author?'<span class="cba">作者</span>':'')+'</div><div class="ct2">'+cm.text+'</div><div class="cf">👍 '+cm.likes+'</div></div></div>'}).join('');
+      cmts = '<div class="cs"><button class="ctb" onclick="var l=this.nextElementSibling;l.classList.toggle(\'show\');this.classList.toggle(\'open\')">💬 精选评论 ('+c.comments.length+') ▾</button><div class="cl">'+items+'</div></div>';
+    }
+    html += '<div class="card"><div class="chd"><span class="cd">'+c.date+'</span><span class="cdr">'+c.duration+'</span><span class="ctg">'+tags+'</span></div><div class="cbd">'+c.body+'</div><div class="cf2"><div class="cmd">'+c.marketDate+'</div><div class="cmk">'+market+'</div></div>'+cmts+'</div>';
+  });
+  document.getElementById('cardList').innerHTML = html || '<p style="text-align:center;color:#9ca3af;padding:40px">没有匹配的内容</p>';
+}
+
+// METHODS
+document.getElementById('methodList').innerHTML = D.methods.map(function(m){
+  return '<div class="mc2"><div class="mn2">'+m.num+'</div><div class="mb2"><h3>'+m.title+'</h3><div class="mq">'+m.quote+'</div><div class="md">'+m.desc+'</div></div></div>';
+}).join('');
+
+// REVIEWS
+document.getElementById('reviewList').innerHTML = D.reviews.map(function(r){
+  return '<div class="rc"><div class="rd">'+r.date+'</div><div class="rb"><div class="rp">'+r.predict+'</div><div class="ra">'+r.actual+'</div><span class="rr '+r.cls+'">'+r.result+'</span></div></div>';
+}).join('');
+
+// TAB SWITCH
+function switchTab(tab){
+  document.getElementById('tab-track').style.display = tab==='track'?'block':'none';
+  document.getElementById('tab-method').style.display = tab==='method'?'block':'none';
+  document.getElementById('tab-review').style.display = tab==='review'?'block':'none';
+  document.querySelectorAll('.tb').forEach(function(b,i){
+    b.classList.toggle('ac', (tab==='track'&&i===0)||(tab==='method'&&i===1)||(tab==='review'&&i===2));
+  });
+}
+
+// INIT
+filter('all');
+</script>
+</body>
+</html>
