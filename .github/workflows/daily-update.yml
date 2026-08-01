@@ -59,7 +59,8 @@ jobs:
           git stash
           git checkout gh-pages
           git checkout main -- app.html
-          git add app.html
+          cp app.html index.html
+          git add app.html index.html
           if git diff --staged --quiet; then
             echo "gh-pages 无变化"
           else
